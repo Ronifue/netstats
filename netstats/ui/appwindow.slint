@@ -1,0 +1,159 @@
+import { VerticalBox, HorizontalBox, LineEdit, ComboBox, CheckBox, Button, Group, SpinBox, Slider, TabWidget, TextView } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: "NetStats - Network Quality Tester";
+    width: 800px;
+    height: 600px;
+
+    // Global properties for UI state
+    property<string> target_ip: "127.0.0.1";
+    property<int> target_port: 5201; // Common for iperf, changed from 5001 to avoid clash if other iperf runs
+    property<int> duration_secs: 10;
+    property<int> tick_rate_hz: 20;
+    property<int> packet_size_bytes: 1024;
+    property<bool> use_random_packet_size: false;
+    property<int> random_min_size: 256;
+    property<int> random_max_size: 1500;
+
+    property<[{text: string, id: string}]> protocol_options: [
+        { text: "UDP", id: "udp" },
+        { text: "TCP", id: "tcp" },
+    ];
+    property<int> selected_protocol_idx: 0; // UDP default
+
+    property<[{text: string, id: string}]> test_mode_options: [
+        { text: "Client", id: "client" },
+        { text: "Server", id: "server" },
+        { text: "Bidirectional", id: "bidi" },
+    ];
+    property<int> selected_test_mode_idx: 0; // Client default
+
+    property<[{text: string, id: string}]> tcp_bidi_mode_options: [
+        { text: "Dual Stream", id: "dual" },
+        { text: "Single Stream", id: "single" },
+    ];
+    property<int> selected_tcp_bidi_mode_idx: 0; // Dual Stream default
+    property<bool> tcp_bidi_options_enabled: false; // Enable only for TCP + Bidirectional
+
+    property<bool> test_in_progress: false;
+    property<string> status_text: "Ready.";
+    property<string> results_summary: ""; // For overall metrics display
+    property<string> html_report_path: "";
+
+
+    // Callbacks
+    callback start_test_clicked();
+    callback run_benchmark_clicked(); // New callback
+    callback open_report_clicked();
+
+    VerticalBox {
+        spacing: 10px;
+        padding: 10px;
+
+        Text { text: "NetStats Configuration"; horizontal-alignment: center; font-size: 20px; }
+
+        Group {
+            title: "Connection";
+            VerticalBox {
+                spacing: 5px;
+                HorizontalBox {
+                    Text { text: "Target IP:"; vertical-alignment: center; }
+                    target_ip_input := LineEdit { text: target_ip; changed(text) => { root.target_ip = text; } }
+                }
+                HorizontalBox {
+                    Text { text: "Target Port:"; vertical-alignment: center; }
+                    target_port_input := SpinBox { value: target_port; minimum: 1; maximum: 65535; changed(value) => { root.target_port = value; } }
+                }
+            }
+        }
+
+        Group {
+            title: "Test Parameters";
+            VerticalBox {
+                spacing: 5px;
+                HorizontalBox {
+                    Text { text: "Duration (s):"; vertical-alignment: center; }
+                    duration_input := SpinBox { value: duration_secs; minimum: 1; maximum: 300; changed(value) => { root.duration_secs = value; } }
+                }
+                HorizontalBox {
+                    Text { text: "Tick Rate (Hz):"; vertical-alignment: center; }
+                    tick_rate_input := SpinBox { value: tick_rate_hz; minimum: 1; maximum: 1000; changed(value) => { root.tick_rate_hz = value; } }
+                }
+                HorizontalBox {
+                    Text { text: "Packet Size (bytes):"; vertical-alignment: center; }
+                    packet_size_input := SpinBox { value: packet_size_bytes; minimum: 1; maximum: 65000; changed(value) => { root.packet_size_bytes = value; } }
+                }
+                HorizontalBox {
+                    use_random_size_check := CheckBox { text: "Random Size"; checked: use_random_packet_size; toggled => { root.use_random_packet_size = !root.use_random_packet_size; } }
+                    min_size_input := SpinBox { value: random_min_size; enabled: use_random_size_check.checked; minimum: 1; maximum: 65000; changed(value) => { root.random_min_size = value; } }
+                    Text { text: "-"; vertical-alignment: center; enabled: use_random_size_check.checked; }
+                    max_size_input := SpinBox { value: random_max_size; enabled: use_random_size_check.checked; minimum: 1; maximum: 65000; changed(value) => { root.random_max_size = value; } }
+                }
+            }
+        }
+
+        Group {
+            title: "Mode & Protocol";
+            HorizontalBox {
+                spacing: 10px;
+                Text { text: "Protocol:"; vertical-alignment: center; }
+                protocol_combo := ComboBox {
+                    model: protocol_options;
+                    current-index: selected_protocol_idx;
+                    selected(idx) => {
+                        root.selected_protocol_idx = idx;
+                        root.tcp_bidi_options_enabled = (protocol_options[idx].id == "tcp" && test_mode_options[selected_test_mode_idx].id == "bidi");
+                    }
+                }
+                Text { text: "Test Mode:"; vertical-alignment: center; }
+                test_mode_combo := ComboBox {
+                    model: test_mode_options;
+                    current-index: selected_test_mode_idx;
+                    selected(idx) => {
+                        root.selected_test_mode_idx = idx;
+                        root.tcp_bidi_options_enabled = (protocol_options[selected_protocol_idx].id == "tcp" && test_mode_options[idx].id == "bidi");
+                    }
+                }
+            }
+            HorizontalBox {
+                visible: tcp_bidi_options_enabled; // Show only if TCP + Bidirectional
+                Text { text: "TCP BiDi Mode:"; vertical-alignment: center; }
+                tcp_bidi_mode_combo := ComboBox {
+                    model: tcp_bidi_mode_options;
+                    current-index: selected_tcp_bidi_mode_idx;
+                    selected(idx) => { root.selected_tcp_bidi_mode_idx = idx; }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 10px;
+            Button {
+                text: test_in_progress ? "Test in Progress..." : "Start Test";
+                enabled: !test_in_progress;
+                clicked => { start_test_clicked(); }
+            }
+            Button {
+                text: test_in_progress ? "Benchmarking..." : "Run Benchmark";
+                enabled: !test_in_progress;
+                clicked => { run_benchmark_clicked(); }
+            }
+            Button {
+                text: "Open Last Report";
+                enabled: html_report_path != "";
+                clicked => { open_report_clicked(); }
+            }
+        }
+
+        TextView { text: status_text; }
+
+        // Placeholder for real-time stats display
+        Group {
+            title: "Real-time Statistics (Placeholder)";
+            TextView {
+                text: results_summary == "" ? "Test results will appear here." : results_summary;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
