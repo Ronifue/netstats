@@ -4,19 +4,13 @@ import argparse
 import time
 import threading
 
-# Ensure src is in python path FIRST
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-SRC_DIR = os.path.join(PROJECT_ROOT, "src")
-if SRC_DIR not in sys.path:
-    sys.path.insert(0, SRC_DIR)
-
 # Now import custom modules
-from tcp_client import TCPClient
-from tcp_server import TCPServer
-from udp_client import UDPClient
-from udp_server import UDPServer
-from utils import save_results_to_json # generate_session_id was confirmed unused here
-from analysis import analyze_session
+from src.tcp_client import TCPClient
+from src.tcp_server import TCPServer
+from src.udp_client import UDPClient
+from src.udp_server import UDPServer
+from src.utils import save_results_to_json # generate_session_id was confirmed unused here
+from src.analysis import analyze_session
 
 def run_tcp_client(args):
     print(f"Running TCP Client Test to {args.host}:{args.port}")
