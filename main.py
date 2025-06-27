@@ -50,10 +50,14 @@ def run_tcp_client(args):
 
         print("\n--- TCP Client Test Results ---")
         for key, value in results.items():
-            if key == "session_id": continue # Already printed
-            if isinstance(value, float): print(f"  {key}: {value:.3f}")
-            elif isinstance(value, list) and len(value) > 5: print(f"  {key}: {value[:3]}... ({len(value)} items)")
-            else: print(f"  {key}: {value}")
+            if key == "session_id":
+                continue # Already printed
+            if isinstance(value, float):
+                print(f"  {key}: {value:.3f}")
+            elif isinstance(value, list) and len(value) > 5:
+                print(f"  {key}: {value[:3]}... ({len(value)} items)")
+            else:
+                print(f"  {key}: {value}")
 
         if results.get("status") != "failure":
             save_results_to_json(
@@ -83,11 +87,16 @@ def run_udp_client(args):
 
     print("\n--- UDP Client Test Results ---")
     for key, value in results.items():
-        if key == "session_id": continue
-        if isinstance(value, float): print(f"  {key}: {value:.3f}")
-        elif key == "rtt_samples_ms" and isinstance(value, list) and len(value) > 5 : print(f"  {key}: {value[:3]}... ({len(value)} samples)")
-        elif isinstance(value, list) and len(value) > 5: print(f"  {key}: {value[:3]}... ({len(value)} items)")
-        else: print(f"  {key}: {value}")
+        if key == "session_id":
+            continue
+        if isinstance(value, float):
+            print(f"  {key}: {value:.3f}")
+        elif key == "rtt_samples_ms" and isinstance(value, list) and len(value) > 5 :
+            print(f"  {key}: {value[:3]}... ({len(value)} samples)")
+        elif isinstance(value, list) and len(value) > 5:
+            print(f"  {key}: {value[:3]}... ({len(value)} items)")
+        else:
+            print(f"  {key}: {value}")
 
     if results.get("status") != "failure":
         save_results_to_json(
@@ -243,4 +252,3 @@ analyze - Analyze previously saved test results.
 
 if __name__ == "__main__":
     main()
-```
