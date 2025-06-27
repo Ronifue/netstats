@@ -1,20 +1,20 @@
-import argparse
-import time
-import os
 import sys
-import threading # For running server in a thread
-
-# Ensure src is in python path
+import os # Moved os import higher
+# Ensure src is in python path FIRST
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.join(PROJECT_ROOT, "src")
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
+import argparse
+import time
+import threading
+
 from tcp_client import TCPClient
 from tcp_server import TCPServer
 from udp_client import UDPClient
 from udp_server import UDPServer
-from utils import save_results_to_json, generate_session_id
+from utils import save_results_to_json # generate_session_id removed from here
 from analysis import analyze_session
 
 # Helper to make client constructors accept session_id (alternative to modifying classes directly now)
@@ -34,7 +34,7 @@ def run_tcp_client(args):
 
     print(f"TCP Client starting. Session ID: {effective_session_id}")
     if client.connect():
-        print(f"TCP Client connected.")
+        print("TCP Client connected.") # F541 Fix
         print(f"Starting TCP test: Duration={args.duration}s, Packet Size={args.size}B, Rate={args.rate}pps")
 
         results = client.run_bandwidth_test(
@@ -109,12 +109,12 @@ def start_threaded_server(server_instance):
     # Wrapper to run server's start method in a thread
     server_thread = threading.Thread(target=server_instance.start, daemon=True)
     server_thread.start()
-    print(f"Server started in a thread. Use Ctrl+C to stop main program and server.")
+    print("Server started in a thread. Use Ctrl+C to stop main program and server.") # F541 Fix
     try:
         while server_thread.is_alive():
-            time.sleep(0.5) # Keep main thread alive while server runs
+            time.sleep(0.5)  # Keep main thread alive while server runs
     except KeyboardInterrupt:
-        print(f"\nKeyboard interrupt received by main. Stopping server...")
+        print("\nKeyboard interrupt received by main. Stopping server...") # F541 Fix
     finally:
         if hasattr(server_instance, 'stop'):
             server_instance.stop()
@@ -171,7 +171,7 @@ def run_analysis_cli(args): # Renamed to avoid conflict with imported analysis m
         if not (client_target_path or server_target_path):
             print(f"Treating '{args.target}' as a Session ID or search term for result files.")
             results_path = "results"
-            found_files = []
+            # found_files = [] # F841 - This list wasn't actually used.
             if os.path.exists(results_path):
                 for f_name in os.listdir(results_path):
                     if args.target in f_name and f_name.endswith(".json") and os.path.isfile(os.path.join(results_path, f_name)):
@@ -181,22 +181,20 @@ def run_analysis_cli(args): # Renamed to avoid conflict with imported analysis m
                         elif "server" in f_name.lower() and not server_target_path:
                             server_target_path = full_f_path
 
-            if not (client_target_path or server_target_path):
+            if not (client_target_path or server_target_path): # This check is after the loop
                 print(f"No specific client/server files found for target/SID '{args.target}'.")
-                # If target was a file but type unclear, and no other files matched by SID:
-                if os.path.isfile(args.target):
-                     print(f"Attempting to analyze '{args.target}' as a generic JSON data file (best effort).")
-                     # This case is tricky as analyze_session expects specific structures.
-                     # For now, we'll just inform the user. A more robust CLI might try to guess.
-                     analyze_session(client_filepath=args.target if "client" in args.target.lower() else None,
-                                     server_filepath=args.target if "server" in args.target.lower() else None)
+                if os.path.isfile(args.target): # Check if original target was a file
+                     print(f"Attempting to analyze '{args.target}' as a single file (type inferred from name).")
+                     analyze_session(
+                         client_filepath=args.target if "client" in args.target.lower() else None,
+                         server_filepath=args.target if "server" in args.target.lower() else None
+                        )
                      return # Exit after this attempt
-
 
         if client_target_path or server_target_path:
             print(f"Found for analysis: Client='{client_target_path}', Server='{server_target_path}'")
             analyze_session(client_filepath=client_target_path, server_filepath=server_target_path)
-        else:
+        elif not os.path.isfile(args.target): # If target was not a file and nothing was found by SID search
             print(f"No result files found matching target/SID '{args.target}'.")
     else:
         # Call analyze_session with no arguments to trigger its default "find latest" logic

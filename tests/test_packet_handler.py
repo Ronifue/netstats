@@ -1,5 +1,5 @@
 import unittest
-import time
+# import time # F401 - Unused
 import os
 import sys
 import struct
