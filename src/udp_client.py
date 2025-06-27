@@ -52,8 +52,8 @@ class UDPClient:
             metadata_len_bytes = raw_data[:4]
             try:
                 metadata_len = struct.unpack('!I', metadata_len_bytes)[0]
-            except struct.error as e:
-                # print(f"UDP Client: Error unpacking metadata length from {addr}: {e}")
+            except struct.error: # Removed 'as e'
+                # print(f"UDP Client: Error unpacking metadata length from {addr}")
                 return None, addr
 
             # 2. Extract metadata and payload
@@ -110,10 +110,14 @@ class UDPClient:
         Runs a UDP bandwidth and quality test towards the server.
         It expects ACKs from the server to calculate loss and RTT.
         """
-        if tickrate <= 0: return {"error": "Tickrate must be positive.", "status": "failure"}
-        if packet_size <= 0: return {"error": "Packet size must be positive.", "status": "failure"}
-        if duration <= 0: return {"error": "Duration must be positive.", "status": "failure"}
-        if ack_timeout <= 0: return {"error": "ACK timeout must be positive.", "status": "failure"}
+        if tickrate <= 0:
+            return {"error": "Tickrate must be positive.", "status": "failure"}
+        if packet_size <= 0:
+            return {"error": "Packet size must be positive.", "status": "failure"}
+        if duration <= 0:
+            return {"error": "Duration must be positive.", "status": "failure"}
+        if ack_timeout <= 0:
+            return {"error": "ACK timeout must be positive.", "status": "failure"}
 
         results = {
             "test_type": "udp_bandwidth_quality",
@@ -225,7 +229,8 @@ class UDPClient:
             results["end_time_unix"] = time.time()
             results["actual_duration_sec"] = time.monotonic() - start_time_monotonic
 
-            if results["status"] == "running": results["status"] = "completed"
+            if results["status"] == "running":
+                results["status"] = "completed"
 
             results["packets_lost"] = results["total_packets_sent"] - results["packets_acked"]
             if results["total_packets_sent"] > 0:
@@ -286,8 +291,8 @@ class UDPClient:
         try:
             self.sock.sendto(data, server_addr)
             return True
-        except socket.error as e:
-            # print(f"UDP Client send_packet_raw_udp error: {e}")
+        except socket.error: # Removed 'as e'
+            # print(f"UDP Client send_packet_raw_udp error")
             return False
 
     def receive_ack_packet(self, timeout: float) -> tuple[Packet | None, tuple | None]:
@@ -328,7 +333,8 @@ if __name__ == '__main__':
                 print(f"Events ({len(value)}):")
                 for item_idx, item in enumerate(value[:min(5, len(value))]):
                     print(f"  - {item}")
-                if len(value) > 5: print(f"    ... and {len(value) - 5} more.")
+                if len(value) > 5:
+                    print(f"    ... and {len(value) - 5} more.")
             elif isinstance(value, float):
                 print(f"{key}: {value:.4f}")
             else:

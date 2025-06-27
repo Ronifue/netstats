@@ -202,8 +202,8 @@ class TCPClient:
         try:
             self.sock.sendall(data)
             return True
-        except socket.error as e:
-            # print(f"TCP Client send_packet_raw error: {e}") # Can be noisy
+        except socket.error: # Removed 'as e' as it's unused
+            # print(f"TCP Client send_packet_raw error")
             return False
 
 

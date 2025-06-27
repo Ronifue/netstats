@@ -290,28 +290,31 @@ if __name__ == '__main__':
                         elif "server" in f_check["name"].lower():
                             server_file_for_sid = f_check["path"]
                 if client_file_for_sid or server_file_for_sid:
-                     print(f"\nProcessing SID: {current_sid}")
-                     analyze_session(client_filepath=client_file_for_sid, server_filepath=server_file_for_sid)
-                     processed_sids.add(current_sid)
-                else: # No clear pair, process individually if it wasn't part of a pair
-                    if not (client_file_for_sid or server_file_for_sid) and ("client" in f_info["name"].lower() or "server" in f_info["name"].lower()):
+                    print(f"\nProcessing SID: {current_sid}")
+                    analyze_session(client_filepath=client_file_for_sid, server_filepath=server_file_for_sid)
+                    processed_sids.add(current_sid)
+                else:  # No clear pair, process individually if it wasn't part of a pair
+                    if not (client_file_for_sid or server_file_for_sid) and \
+                       ("client" in f_info["name"].lower() or "server" in f_info["name"].lower()):
                         print(f"\nProcessing individual file (no SID match or SID not in filename pattern): {f_info['name']}")
-                        if "client" in f_info["name"].lower(): analyze_session(client_filepath=f_info["path"])
-                        else: analyze_session(server_filepath=f_info["path"])
+                        if "client" in f_info["name"].lower():
+                            analyze_session(client_filepath=f_info["path"])
+                        else:
+                            analyze_session(server_filepath=f_info["path"])
 
-            elif ("client" in f_info["name"].lower() or "server" in f_info["name"].lower()): # No SID in filename, process individually
+            elif ("client" in f_info["name"].lower() or "server" in f_info["name"].lower()):  # No SID in filename, process individual
                 print(f"\nProcessing individual file (no SID in filename): {f_info['name']}")
-                if "client" in f_info["name"].lower(): analyze_session(client_filepath=f_info["path"])
-                else: analyze_session(server_filepath=f_info["path"])
+                if "client" in f_info["name"].lower():
+                    analyze_session(client_filepath=f_info["path"])
+                else:
+                    analyze_session(server_filepath=f_info["path"])
 
-            if len(processed_sids) >= 3 and len(all_files) > 6 : # Limit processing for bulk files in test
+            if len(processed_sids) >= 3 and len(all_files) > 6:  # Limit processing for bulk files in test
                 print("\nProcessed a few SIDs/files. Stopping analysis for brevity in this run.")
                 break
 
 
-        if not processed_sids and not any("client" in f["name"].lower() or "server" in f["name"].lower() for f in all_files):
+        if not processed_sids and not any("client" in f["name"].lower() or "server" in f["name"].lower() for f in all_files if isinstance(f, dict) and "name" in f): # Added check for f type
              print("No client or server result files with recognizable SIDs found to analyze.")
     else:
         print(f"No result files found in '{results_path}' directory.")
-
-```

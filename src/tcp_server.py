@@ -1,8 +1,8 @@
 import socket
 import threading
 import time
-from .packet_handler import Packet, read_packet_from_tcp_socket
-from .utils import save_results_to_json # Added for saving results
+from .packet_handler import read_packet_from_tcp_socket # Removed Packet
+from .utils import save_results_to_json
 
 class TCPServer:
     def __init__(self, host: str, port: int):
@@ -151,9 +151,10 @@ class TCPServer:
             event_count = len(current_session_data["events"])
             if event_count > 0:
                 print(f"  Noteworthy events ({event_count}):")
-                for event in current_session_data["events"][:min(3, event_count)]: # Print first few
+                for event in current_session_data["events"][:min(3, event_count)]:  # Print first few
                     print(f"    - Time: {event.get('time'):.2f}, Type: {event.get('type')}, Details: {event.get('message', event.get('seq', ''))}")
-                if event_count > 3: print(f"    ... and {event_count - 3} more events.")
+                if event_count > 3:
+                    print(f"    ... and {event_count - 3} more events.")
             print("-----------------------------------\n")
             # --- End Session Summary ---
 
@@ -175,7 +176,8 @@ class TCPServer:
                     del self.clients[conn]
             try:
                 conn.shutdown(socket.SHUT_RDWR)
-            except socket.error: pass
+            except socket.error:
+                pass
             conn.close()
             print(f"TCP Server: Closed connection for {addr}")
 

@@ -78,23 +78,30 @@ class UDPServer:
                     client_addr_str = f"{addr[0]}:{addr[1]}"
 
                     # --- Packet Deserialization (from existing logic) ---
-                    if len(raw_data) < 4: continue
+                    if len(raw_data) < 4:
+                        continue
                     metadata_len_bytes = raw_data[:4]
-                    try: metadata_len = struct.unpack('!I', metadata_len_bytes)[0]
-                    except struct.error: continue
+                    try:
+                        metadata_len = struct.unpack('!I', metadata_len_bytes)[0]
+                    except struct.error:
+                        continue
 
                     header_end = 4 + metadata_len
-                    if len(raw_data) < header_end: continue
+                    if len(raw_data) < header_end:
+                        continue
                     metadata_bytes = raw_data[4:header_end]
                     payload_bytes = raw_data[header_end:]
                     header = Packet.deserialize_header(metadata_bytes)
-                    if not header: continue
+                    if not header:
+                        continue
 
                     expected_payload_size = header.get("ps", 0)
-                    if len(payload_bytes) != expected_payload_size: continue
+                    if len(payload_bytes) != expected_payload_size:
+                        continue
 
                     packet = Packet.from_parts(header, payload_bytes)
-                    if not packet: continue
+                    if not packet:
+                        continue
                     # --- End Packet Deserialization ---
 
                     # Get or create session for this client address and packet's session_id
@@ -127,7 +134,7 @@ class UDPServer:
                         ack_payload_dup = f"ACK_DUP_S{packet.session_id}_N{packet.sequence_number}".encode()
                         ack_packet_dup = Packet(sequence_number=packet.sequence_number, session_id=packet.session_id, is_ack=True, data=ack_payload_dup)
                         self.sock.sendto(ack_packet_dup.serialize(), addr)
-                        continue # Skip further processing for this duplicate
+                        continue  # Skip further processing for this duplicate
 
                     session["received_sn_set"].add(packet.sequence_number)
                     # Optional: Implement eviction for received_sn_set if it grows too large for very long tests
@@ -170,7 +177,7 @@ class UDPServer:
                         data=ack_payload_content # Small payload for ACK
                     )
                     serialized_ack = ack_packet.serialize()
-                    self.sock.sendto(serialized_ack, addr) # Send ACK to original sender addr
+                    self.sock.sendto(serialized_ack, addr)  # Send ACK to original sender addr
 
                 except socket.timeout:
                     continue
@@ -188,11 +195,14 @@ class UDPServer:
                                     base_filename=f"udp_server_session_{client_addr_str.replace(':','_').replace('.','_')}_connreset",
                                     session_id_override=str(session_to_save.get("session_id"))
                                 )
-                except socket.error as e: # Other socket errors
-                    if self._running.is_set(): print(f"UDP Server socket error: {e} for client {addr}")
-                    if not self._running.is_set(): break  # Server is stopping
+                except socket.error as e:  # Other socket errors
+                    if self._running.is_set():
+                        print(f"UDP Server socket error: {e} for client {addr}")
+                    if not self._running.is_set():
+                        break  # Server is stopping
                 except Exception as e:
-                    if self._running.is_set(): print(f"UDP Server unexpected error: {e} ({type(e).__name__})")
+                    if self._running.is_set():
+                        print(f"UDP Server unexpected error: {e} ({type(e).__name__})")
 
         except socket.error as e:
             print(f"UDP Server bind error on {self.host}:{self.port}: {e}")
