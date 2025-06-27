@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::io;
 use tokio::net::{TcpStream, TcpListener, UdpSocket};
-use tokio::sync::mpsc; // For potential internal signaling if needed
+// use tokio::sync::mpsc; // Unused: For potential internal signaling if needed
 
 #[derive(Debug)] // Added Debug derive
 pub enum NetworkError {
@@ -57,7 +57,7 @@ pub async fn run_network_test(
                 Protocol::Udp => udp_send_loop(Arc::clone(&config), remote_addr, metrics, true).await?, // is_primary_sender = true
                 Protocol::Tcp => {
                     let stream = tcp_connect(remote_addr).await?;
-                    let (reader, writer) = tokio::io::split(stream);
+                    let (_reader, writer) = tokio::io::split(stream); // _reader is unused for now
                     // In client-only mode, primarily sends. Receiving might be for ACKs.
                     // For now, just run send_loop. Acks would require a receive_loop too.
                     tcp_send_loop(Arc::clone(&config), writer, metrics, true).await?;
@@ -79,7 +79,7 @@ pub async fn run_network_test(
                     println!("TCP Server: Waiting for a connection on {}...", listen_addr);
                     let (stream, client_addr) = listener.accept().await?;
                     println!("TCP Server: Accepted connection from {}", client_addr);
-                    let (reader, writer) = tokio::io::split(stream);
+                    let (reader, _writer) = tokio::io::split(stream); // _writer is unused for now
                     // In server-only mode, primarily receives. Sending might be for ACKs.
                     // For now, just run receive_loop. ACKs would require a send_loop too.
                     tcp_receive_loop(Arc::clone(&config), reader, metrics).await?;
@@ -270,7 +270,9 @@ async fn udp_send_loop(
     let test_duration = config.total_duration();
     let tick_interval = config.tick_interval();
 
-    let mut rng = if config.packet_size_range.is_some() { Some(rand::thread_rng()) } else { None };
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+    let mut rng = if config.packet_size_range.is_some() { Some(StdRng::from_entropy()) } else { None };
     let mut sequence_number: u32 = 0;
 
     let mut ticker = if config.tick_rate_hz > 0 { // Normal tick-based sending
@@ -310,14 +312,17 @@ async fn udp_send_loop(
             None => config.packet_size_bytes,
         };
 
-        let packet_type = if is_primary_sender {
-            crate::packet::PacketType::Data // Primary data stream
-        } else {
-            crate::packet::PacketType::Data // Also data, but from the "other side" of bidi
-            // Or could be EchoRequest if we want to measure RTT for this direction
-        };
+        // let packet_type = if is_primary_sender { // This variable was unused
+        //     crate::packet::PacketType::Data
+        // } else {
+        //     crate::packet::PacketType::Data
+        // };
 
         // For UDP RTT measurement, client sends EchoRequest and expects EchoReply
+        // If !is_primary_sender, this implies it's the "server" side of a bidi sending data.
+        // It should probably send DataPacket, not EchoRequest, unless we want bidi RTT from both sides.
+        // For now, both primary and secondary UDP senders in bidi mode will send EchoRequest
+        // to simplify and allow RTT measurement from both perspectives if desired (though only primary currently processes replies).
         let packet = CustomPacket::new_echo_request(sequence_number, current_packet_size);
 
         let sent_payload = packet.to_bytes()?;
@@ -413,19 +418,16 @@ async fn udp_receive_loop(
                         match CustomPacket::from_bytes(data) {
                             Ok(packet) => {
                                 let current_seq = packet.header.sequence_number;
-                                let mut is_out_of_order = false;
 
                                 { // Metrics lock scope
                                     let mut metrics_guard = metrics.lock().unwrap();
                                     metrics_guard.record_packet_received(len, 0); // RTT 0 for server-side
 
                                     if let Some(highest_seen) = highest_udp_seq_received {
-                                        // Crude wrap-around check (e.g. seq 10 received after seq 4_000_000_000)
                                         let is_likely_wrap = current_seq < (u32::MAX / 4) && highest_seen > (u32::MAX * 3 / 4);
                                         if current_seq < highest_seen && !is_likely_wrap {
-                                            is_out_of_order = true;
+                                            // This is an out-of-order packet
                                             metrics_guard.out_of_order_count += 1;
-
                                             let anomaly_time_ms = metrics_guard.test_start_time
                                                 .map_or(0, |st| Instant::now().duration_since(st).as_millis());
                                             metrics_guard.anomalies.push(crate::anomalies::AnomalyEvent {
@@ -437,12 +439,8 @@ async fn udp_receive_loop(
                                     }
                                 } // Metrics lock scope ends
 
-                                // Update highest_udp_seq_received, consider it even if OOO for next packet comparisons
-                                // but primary update should be for in-order or new highest.
-                                // If it's out of order, we don't necessarily update highest_udp_seq_received downwards.
-                                // It should always track the actual highest sequence number encountered so far to detect subsequent OOO packets.
+                                // Always update highest_udp_seq_received to the maximum sequence number seen so far.
                                 highest_udp_seq_received = Some(highest_udp_seq_received.map_or(current_seq, |h| h.max(current_seq)));
-
 
                                 if packet.header.packet_type == crate::packet::PacketType::EchoRequest {
                                     let reply_packet = CustomPacket::new_echo_reply(&packet);
@@ -532,7 +530,9 @@ async fn tcp_send_loop(
     let test_start_time = metrics.lock().unwrap().test_start_time.unwrap_or_else(Instant::now);
     let test_duration = config.total_duration();
     let tick_interval = config.tick_interval();
-    let mut rng = if config.packet_size_range.is_some() { Some(rand::thread_rng()) } else { None };
+    // use rand::rngs::StdRng; // Already imported if udp_send_loop is in the same file and parsed first
+    // use rand::SeedableRng;
+    let mut rng = if config.packet_size_range.is_some() { Some(rand::rngs::StdRng::from_entropy()) } else { None };
     let mut sequence_number: u32 = 0;
     let mut ticker = tokio::time::interval_at(tokio::time::Instant::now() + tick_interval, tick_interval);
 
@@ -606,7 +606,7 @@ async fn tcp_receive_loop(
     // Similar to tcp_send_loop, this function should take an OwnedReadHalf.
     // The current signature `stream: Arc<TcpStream>` is problematic for direct read loop
     // if a send loop is also trying to use the same Arc directly.
-    use tokio::io::AsyncReadExt;
+    // use tokio::io::AsyncReadExt; // Removed duplicate import, already imported at top of file or module
     // let peer_addr = stream.peer_addr().ok(); // Not available on ReadHalf, log from caller if needed
     println!("TCP ReceiveLoop: Placeholder section (simulating duration). Actual logic below.");
 
@@ -662,7 +662,7 @@ async fn tcp_receive_loop(
                         match reader.read_exact(&mut packet_buffer[..packet_len]).await {
                             Ok(_) => {
                                 match CustomPacket::from_bytes(&packet_buffer[..packet_len]) {
-                                    Ok(packet) => {
+                                    Ok(_packet) => { // Prefixed with _ as it's not used beyond parsing
                                         // TODO: Process packet (e.g., if it's an EchoRequest, need WriteHalf to reply)
                                         // This loop currently only has ReadHalf. Echo replies would need more complex setup.
                                         // For now, just record metrics.

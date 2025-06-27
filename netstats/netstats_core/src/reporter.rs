@@ -2,10 +2,10 @@
 
 use crate::metrics::TestMetrics;
 use crate::anomalies::AnomalyEvent;
-use crate::config::{TestConfig, Protocol, TestMode, TcpBidirectionalMode}; // Added more config types for template
+use crate::config::TestConfig; // Protocol, TestMode, TcpBidirectionalMode were unused directly by this file's code
 use std::time::SystemTime;
 use askama::Template; // Import Askama
-use serde_json; // For serializing data to JSON for JS charts
+use serde_json; // For serializing data to JSON for JS charts - used by macro serde_json::json!
 
 #[derive(Template)]
 #[template(path = "report_template.html")] // Path to the template file

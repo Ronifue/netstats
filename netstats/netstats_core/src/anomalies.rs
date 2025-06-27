@@ -1,7 +1,7 @@
 // Logic for detecting defined network anomalies
 
 // Example structure for an anomaly event
-#[derive(Debug)]
+#[derive(Debug, Clone, serde::Serialize)] // Added Clone and Serialize
 pub enum AnomalyType {
     PacketLoss,
     OutOfOrder,
@@ -14,7 +14,7 @@ pub enum AnomalyType {
     ExcessiveRetransmissions,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, serde::Serialize)] // Added Clone and Serialize
 pub struct AnomalyEvent {
     pub timestamp_ms: u128, // When the anomaly was detected or occurred
     pub anomaly_type: AnomalyType,

@@ -56,10 +56,10 @@
                 <tr><th>Bytes Sent</th><td>{{ summary.overall_metrics.bytes_sent }}</td></tr>
                 <tr><th>Bytes Received</th><td>{{ summary.overall_metrics.bytes_received }}</td></tr>
                 <tr><th>Packet Loss</th><td>{{ "%.2f"|format(summary.overall_metrics.packet_loss_percentage()) }}%</td></tr>
-                <tr><th>Avg. RTT</th><td>{{ summary.overall_metrics.average_rtt_micros().map(|v| "%.3f ms"|format(v/1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
-                <tr><th>Min RTT</th><td>{{ summary.overall_metrics.min_rtt_micros.map(|v| "%.3f ms"|format(v/1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
-                <tr><th>Max RTT</th><td>{{ summary.overall_metrics.max_rtt_micros.map(|v| "%.3f ms"|format(v/1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
-                <tr><th>Avg. Jitter</th><td>{{ summary.overall_metrics.average_jitter_micros().map(|v| "%.3f ms"|format(v/1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
+                <tr><th>Avg. RTT</th><td>{{ summary.overall_metrics.average_rtt_micros().map(|v_val| "%.3f ms"|format(v_val / 1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
+                <tr><th>Min RTT</th><td>{{ summary.overall_metrics.min_rtt_micros.map(|v_val| "%.3f ms"|format(v_val as f64 / 1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
+                <tr><th>Max RTT</th><td>{{ summary.overall_metrics.max_rtt_micros.map(|v_val| "%.3f ms"|format(v_val as f64 / 1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
+                <tr><th>Avg. Jitter</th><td>{{ summary.overall_metrics.average_jitter_micros().map(|v_val| "%.3f ms"|format(v_val / 1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
                 <tr><th>Overall Throughput (Received)</th><td>{{ "%.2f Mbps"|format(summary.overall_metrics.overall_throughput_bps(summary.test_duration_actual_secs) / 1_000_000.0) }}</td></tr>
             </table>
         </div>

@@ -1,7 +1,7 @@
 // Logic for calculating metrics (loss, latency, jitter, bandwidth)
 use serde::Serialize; // For #[serde(skip)] if TestMetrics is ever serialized
-use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+// use std::collections::VecDeque; // Unused
+use std::time::Instant; // Duration was unused
 
 #[derive(Debug, Default, Serialize)] // Added Serialize for skip attribute
 pub struct TestMetrics {
