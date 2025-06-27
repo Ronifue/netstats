@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetStats Test Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+        th { background-color: #f0f0f0; }
+        .section { margin-bottom: 30px; }
+        .chart-container { width: 90%; max-width: 800px; margin: 20px auto; padding: 10px; background-color: #fff; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.05); }
+        .anomaly { border-left: 3px solid #ff6b6b; padding-left: 10px; margin-bottom: 8px; background-color: #fff9f9; }
+        .anomaly .timestamp { font-weight: bold; }
+        .label { font-weight: bold; color: #444; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>NetStats Test Report</h1>
+
+        <div class="section">
+            <h2>Test Configuration</h2>
+            <table>
+                <tr><th>Target IP</th><td>{{ summary.test_config.target_ip }}</td></tr>
+                <tr><th>Target Port</th><td>{{ summary.test_config.target_port }}</td></tr>
+                <tr><th>Duration</th><td>{{ summary.test_config.test_duration_secs }} seconds</td></tr>
+                <tr><th>Tick Rate</th><td>{{ summary.test_config.tick_rate_hz }} Hz</td></tr>
+                <tr><th>Packet Size (Base)</th><td>{{ summary.test_config.packet_size_bytes }} bytes</td></tr>
+                {% if summary.test_config.packet_size_range.is_some() %}
+                <tr><th>Packet Size Range</th><td>{{ summary.test_config.packet_size_range.unwrap().0 }} - {{ summary.test_config.packet_size_range.unwrap().1 }} bytes</td></tr>
+                {% endif %}
+                <tr><th>Protocol</th><td>{{ summary.test_config.protocol }}</td></tr>
+                <tr><th>Test Mode</th><td>{{ summary.test_config.test_mode }}</td></tr>
+                {% if summary.test_config.protocol == Protocol::Tcp && summary.test_config.test_mode == TestMode::Bidirectional %}
+                    {% if summary.test_config.tcp_bidirectional_mode.is_some() %}
+                        <tr><th>TCP BiDi Mode</th><td>{{ summary.test_config.tcp_bidirectional_mode.unwrap() }}</td></tr>
+                    {% endif %}
+                {% endif %}
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Overall Metrics</h2>
+            <table>
+                <tr><th>Test Start Time (UTC)</th><td>{{ summary.start_time_utc }}</td></tr>
+                <tr><th>Test End Time (UTC)</th><td>{{ summary.end_time_utc }}</td></tr>
+                <tr><th>Actual Duration</th><td>{{ "%.2f"|format(summary.test_duration_actual_secs) }} seconds</td></tr>
+                <tr><th>Packets Sent</th><td>{{ summary.overall_metrics.packets_sent }}</td></tr>
+                <tr><th>Packets Received</th><td>{{ summary.overall_metrics.packets_received }}</td></tr>
+                <tr><th>Bytes Sent</th><td>{{ summary.overall_metrics.bytes_sent }}</td></tr>
+                <tr><th>Bytes Received</th><td>{{ summary.overall_metrics.bytes_received }}</td></tr>
+                <tr><th>Packet Loss</th><td>{{ "%.2f"|format(summary.overall_metrics.packet_loss_percentage()) }}%</td></tr>
+                <tr><th>Avg. RTT</th><td>{{ summary.overall_metrics.average_rtt_micros().map(|v_val| "%.3f ms"|format(v_val / 1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
+                <tr><th>Min RTT</th><td>{{ summary.overall_metrics.min_rtt_micros.map(|v_val| "%.3f ms"|format(v_val as f64 / 1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
+                <tr><th>Max RTT</th><td>{{ summary.overall_metrics.max_rtt_micros.map(|v_val| "%.3f ms"|format(v_val as f64 / 1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
+                <tr><th>Avg. Jitter</th><td>{{ summary.overall_metrics.average_jitter_micros().map(|v_val| "%.3f ms"|format(v_val / 1000.0)).unwrap_or("N/A".to_string()) }}</td></tr>
+                <tr><th>Overall Throughput (Received)</th><td>{{ "%.2f Mbps"|format(summary.overall_metrics.overall_throughput_bps(summary.test_duration_actual_secs) / 1_000_000.0) }}</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Bandwidth Over Time</h2>
+            <div class="chart-container">
+                <canvas id="bandwidthChart"></canvas>
+            </div>
+        </div>
+
+        {% if !summary.anomalies.is_empty() %}
+        <div class="section">
+            <h2>Detected Anomalies ({{ summary.anomalies.len() }})</h2>
+            {% for anomaly in summary.anomalies %}
+            <div class="anomaly">
+                <span class="timestamp">[{{ "%.3f"|format(anomaly.timestamp_ms as f64 / 1000.0) }}s]</span>
+                <span class="label">{{ anomaly.anomaly_type }}:</span>
+                <span>{{ anomaly.description }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="section">
+            <h2>Detected Anomalies</h2>
+            <p>No anomalies detected during this test.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        const bandwidthData = {{ bandwidth_chart_data_json|safe }};
+        const labels = bandwidthData.map(d => d.time.toFixed(2));
+        const dataPoints = bandwidthData.map(d => d.mbps.toFixed(2));
+
+        const ctx = document.getElementById('bandwidthChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Bandwidth (Mbps)',
+                    data: dataPoints,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1,
+                    fill: false,
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Time (seconds since start)' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Bandwidth (Mbps)' },
+                        beginAtZero: true
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+    </script>
+</body>
+</html>

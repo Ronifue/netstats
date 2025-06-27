@@ -1,0 +1,16 @@
+[package]
+name = "netstats"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+slint = "1.5" # Using a recent version, can be updated if needed
+netstats_core = { path = "netstats_core" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] } # For running core logic async
+chrono = "0.4" # For unique report filenames
+open = "5" # For opening the HTML report
+
+[build-dependencies]
+slint-build = "1.5" # Ensure this matches the Slint version
