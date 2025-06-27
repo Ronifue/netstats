@@ -222,4 +222,3 @@ analyze - Analyze previously saved test results.
 
 if __name__ == "__main__":
     main()
-```

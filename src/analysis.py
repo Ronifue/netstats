@@ -317,4 +317,3 @@ if __name__ == '__main__':
              print("No client or server result files with recognizable SIDs found to analyze.")
     else:
         print(f"No result files found in '{results_path}' directory.")
-```
