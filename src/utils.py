@@ -1,7 +1,8 @@
 import json
 import os
 import datetime
-import time # For session ID generation if needed, though usually passed in
+import time
+from typing import Optional # Added Optional
 
 def generate_session_id() -> str:
     """Generates a unique session ID based on timestamp."""
@@ -10,7 +11,7 @@ def generate_session_id() -> str:
 def save_results_to_json(data: dict,
                          base_filename: str,
                          results_dir: str = "results",
-                         session_id_override: str = None):
+                         session_id_override: Optional[str] = None): # Changed type hint
     """
     Saves the given data dictionary to a JSON file in the specified results directory.
     A timestamp and session ID will be part of the filename.

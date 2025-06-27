@@ -182,22 +182,28 @@ class UDPServer:
                 except socket.timeout:
                     continue
                 except ConnectionResetError as e:
-                    # print(f"UDP Server: ConnectionResetError from {addr}: {e}.")
-                    with self.client_sessions_lock:
-                        if client_addr_str in self.client_sessions:
-                            session_to_save = self.client_sessions.pop(client_addr_str) # pop to remove and get data
-                            session_to_save["end_time_unix"] = time.time()
-                            session_to_save["events"].append({"time":session_to_save["end_time_unix"], "type":"error", "message": f"Session ended due to ConnectionResetError: {e}"})
-                            print(f"UDP Server: Saving and removing session for {client_addr_str} due to ConnectionResetError.")
-                            if session_to_save.get("total_packets_received", 0) > 0:
-                                save_results_to_json(
-                                    data=session_to_save,
-                                    base_filename=f"udp_server_session_{client_addr_str.replace(':','_').replace('.','_')}_connreset",
-                                    session_id_override=str(session_to_save.get("session_id"))
-                                )
+                    # Safely use addr and client_addr_str if they were defined in the try block
+                    addr_str_for_log = addr if 'addr' in locals() else 'unknown address'
+                    client_addr_str_for_log = client_addr_str if 'client_addr_str' in locals() else 'unknown_client'
+                    print(f"UDP Server: ConnectionResetError potentially related to {addr_str_for_log}: {e}.")
+
+                    if 'client_addr_str' in locals() and client_addr_str: # Ensure client_addr_str was defined
+                        with self.client_sessions_lock:
+                            if client_addr_str in self.client_sessions:
+                                session_to_save = self.client_sessions.pop(client_addr_str)
+                                session_to_save["end_time_unix"] = time.time()
+                                session_to_save["events"].append({"time":session_to_save["end_time_unix"], "type":"error", "message": f"Session for {client_addr_str_for_log} ended due to ConnectionResetError: {e}"})
+                                print(f"UDP Server: Saving and removing session for {client_addr_str_for_log} due to ConnectionResetError.")
+                                if session_to_save.get("total_packets_received", 0) > 0:
+                                    save_results_to_json(
+                                        data=session_to_save,
+                                        base_filename=f"udp_server_session_{client_addr_str.replace(':','_').replace('.','_')}_connreset", # Use original client_addr_str for filename consistency
+                                        session_id_override=str(session_to_save.get("session_id"))
+                                    )
                 except socket.error as e:  # Other socket errors
+                    current_addr_for_log = addr if 'addr' in locals() else 'unknown_address'
                     if self._running.is_set():
-                        print(f"UDP Server socket error: {e} for client {addr}")
+                        print(f"UDP Server socket error: {e} for client {current_addr_for_log}")
                     if not self._running.is_set():
                         break  # Server is stopping
                 except Exception as e:

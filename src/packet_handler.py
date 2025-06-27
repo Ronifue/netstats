@@ -4,8 +4,8 @@ import hashlib
 import json
 
 class Packet:
-    def __init__(self, sequence_number: int, data: bytes = b'', is_ack: bool = False, session_id: int = 0):
-        self.session_id = session_id # To differentiate test sessions
+    def __init__(self, sequence_number: int, data: bytes = b'', is_ack: bool = False, session_id: str = "0"): # Changed type and default
+        self.session_id: str = str(session_id) # Ensure it's a string
         self.sequence_number = sequence_number
         self.timestamp = time.time() # Timestamp of creation (sender) or reception (receiver can overwrite)
         self.payload = data

@@ -5,8 +5,7 @@ import matplotlib
 matplotlib.use('Agg') # Use Agg backend for non-interactive environments (e.g. servers, scripts)
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-# import numpy as np # F401 - Unused
-# import datetime # For type hinting if used - F401 Unused (type hints can use string literals)
+from typing import Optional # Added Optional
 
 # Ensure a directory for charts exists
 CHARTS_DIR = os.path.join("results", "charts")
@@ -178,7 +177,7 @@ def generate_summary_statistics_table_image(data: dict, title: str, output_filen
     print(f"Summary statistics table image for {title} saved to {filepath}")
 
 
-def analyze_session(client_filepath: str = None, server_filepath: str = None):
+def analyze_session(client_filepath: Optional[str] = None, server_filepath: Optional[str] = None): # Changed type hints
     client_data = None
     server_data = None
     client_sid = "N/A_C"

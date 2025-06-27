@@ -94,9 +94,12 @@ class UDPClient:
             print(f"UDP Client unexpected error during receive from {self.server_address}: {e}")
             return None, None
         finally:
-            # It's good practice to reset timeout if the socket is reused for other blocking operations later,
-            # but for a dedicated client method like this, it might not be strictly necessary if each call sets its own.
-            self.sock.settimeout(None)
+            if self.sock: # Check if sock is still valid
+                try:
+                    self.sock.settimeout(None)
+                except socket.error:
+                    # Socket might be closed or in an error state, ignore
+                    pass
 
 
     def close(self):
