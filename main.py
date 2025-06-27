@@ -144,7 +144,7 @@ def run_analysis_cli(args):
         if not (client_target_path or server_target_path):
             print(f"Treating '{args.target}' as a Session ID or search term for result files.")
             results_path = "results"
-            # found_files = [] # F841 - This list wasn't actually used. It's okay to remove.
+            # F841: found_files = [] was here, removed as it's not used.
             if os.path.exists(results_path):
                 for f_name in os.listdir(results_path):
                     if args.target in f_name and f_name.endswith(".json") and os.path.isfile(os.path.join(results_path, f_name)):

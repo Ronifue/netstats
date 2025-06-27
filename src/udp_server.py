@@ -72,10 +72,16 @@ class UDPServer:
             self.sock.settimeout(1.0)
 
             while self._running.is_set():
+                addr = None  # Initialize addr
+                client_addr_str = None # Initialize client_addr_str
                 try:
                     raw_data, addr = self.sock.recvfrom(65535)
                     server_recv_time_unix = time.time()
-                    client_addr_str = f"{addr[0]}:{addr[1]}"
+                    if addr: # Check if addr was successfully assigned
+                        client_addr_str = f"{addr[0]}:{addr[1]}"
+                    else: # Should ideally not happen if recvfrom is successful, but as a safeguard
+                        print("UDP Server: recvfrom returned, but addr is None. Skipping packet.")
+                        continue
 
                     # --- Packet Deserialization (from existing logic) ---
                     if len(raw_data) < 4:
@@ -182,28 +188,28 @@ class UDPServer:
                 except socket.timeout:
                     continue
                 except ConnectionResetError as e:
-                    # Safely use addr and client_addr_str if they were defined in the try block
-                    addr_str_for_log = addr if 'addr' in locals() else 'unknown address'
-                    client_addr_str_for_log = client_addr_str if 'client_addr_str' in locals() else 'unknown_client'
-                    print(f"UDP Server: ConnectionResetError potentially related to {addr_str_for_log}: {e}.")
+                    # addr and client_addr_str are initialized to None before try block
+                    addr_repr = f"{addr[0]}:{addr[1]}" if addr else "unknown_address"
+                    client_addr_repr = client_addr_str if client_addr_str else "unknown_client"
+                    print(f"UDP Server: ConnectionResetError potentially related to {addr_repr}: {e}.")
 
-                    if 'client_addr_str' in locals() and client_addr_str: # Ensure client_addr_str was defined
+                    if client_addr_str: # Check if client_addr_str was successfully defined
                         with self.client_sessions_lock:
                             if client_addr_str in self.client_sessions:
                                 session_to_save = self.client_sessions.pop(client_addr_str)
                                 session_to_save["end_time_unix"] = time.time()
-                                session_to_save["events"].append({"time":session_to_save["end_time_unix"], "type":"error", "message": f"Session for {client_addr_str_for_log} ended due to ConnectionResetError: {e}"})
-                                print(f"UDP Server: Saving and removing session for {client_addr_str_for_log} due to ConnectionResetError.")
+                                session_to_save["events"].append({"time":session_to_save["end_time_unix"], "type":"error", "message": f"Session for {client_addr_repr} ended due to ConnectionResetError: {e}"})
+                                print(f"UDP Server: Saving and removing session for {client_addr_repr} due to ConnectionResetError.")
                                 if session_to_save.get("total_packets_received", 0) > 0:
                                     save_results_to_json(
                                         data=session_to_save,
-                                        base_filename=f"udp_server_session_{client_addr_str.replace(':','_').replace('.','_')}_connreset", # Use original client_addr_str for filename consistency
+                                        base_filename=f"udp_server_session_{client_addr_str.replace(':','_').replace('.','_')}_connreset",
                                         session_id_override=str(session_to_save.get("session_id"))
                                     )
                 except socket.error as e:  # Other socket errors
-                    current_addr_for_log = addr if 'addr' in locals() else 'unknown_address'
+                    current_addr_repr = f"{addr[0]}:{addr[1]}" if addr else "unknown_address"
                     if self._running.is_set():
-                        print(f"UDP Server socket error: {e} for client {current_addr_for_log}")
+                        print(f"UDP Server socket error: {e} for client {current_addr_repr}")
                     if not self._running.is_set():
                         break  # Server is stopping
                 except Exception as e:
