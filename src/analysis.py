@@ -5,8 +5,8 @@ import matplotlib
 matplotlib.use('Agg') # Use Agg backend for non-interactive environments (e.g. servers, scripts)
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import numpy as np
-import datetime # For type hinting if used
+# import numpy as np # F401 - Unused
+# import datetime # For type hinting if used - F401 Unused (type hints can use string literals)
 
 # Ensure a directory for charts exists
 CHARTS_DIR = os.path.join("results", "charts")
@@ -104,15 +104,15 @@ def plot_latency_distribution(latency_samples_ms: list, title_prefix: str, outpu
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 
     df['latency'].plot(kind='hist', bins=max(10, min(len(df)//10, 50)), ax=axes[0], edgecolor='black', alpha=0.7)
-    axes[0].set_title(f"Latency Histogram")
+    axes[0].set_title("Latency Histogram") # F541 Fix
     axes[0].set_xlabel(f"Latency ({unit})")
     axes[0].set_ylabel("Frequency")
     axes[0].grid(True, axis='y', linestyle=':', linewidth=0.7)
 
-    df['latency'].plot(kind='box', ax=axes[1], vert=True, widths=0.5) # Changed to vertical
-    axes[1].set_title(f"Latency Boxplot")
-    axes[1].set_ylabel(f"Latency ({unit})") # Y-label for vertical
-    axes[1].set_xticks([]) # Remove x-axis ticks for vertical boxplot
+    df['latency'].plot(kind='box', ax=axes[1], vert=True, widths=0.5)  # Changed to vertical
+    axes[1].set_title("Latency Boxplot") # F541 Fix
+    axes[1].set_ylabel(f"Latency ({unit})")  # Y-label for vertical
+    axes[1].set_xticks([])  # Remove x-axis ticks for vertical boxplot
     axes[1].grid(True, axis='y', linestyle=':', linewidth=0.7)
 
     plt.suptitle(f"{title_prefix} Latency Distribution (SID: {session_id})", fontsize=16)
@@ -196,7 +196,7 @@ def analyze_session(client_filepath: str = None, server_filepath: str = None):
                 if "rtt_samples_ms" in client_data and client_data["rtt_samples_ms"]:
                     plot_latency_distribution(
                         client_data["rtt_samples_ms"],
-                        title_prefix=f"Client UDP RTT",
+                        title_prefix="Client UDP RTT", # F541 Fix
                         output_filename=f"client_udp_rtt_dist_{client_sid}.png",
                         session_id=client_sid
                     )
@@ -206,7 +206,7 @@ def analyze_session(client_filepath: str = None, server_filepath: str = None):
 
             generate_summary_statistics_table_image(
                 client_data,
-                title=f"Client Test Summary",
+                title="Client Test Summary", # F541 Fix
                 output_filename=f"client_summary_{client_sid}.png",
                 session_id=client_sid
             )
@@ -223,8 +223,8 @@ def analyze_session(client_filepath: str = None, server_filepath: str = None):
                 plot_bandwidth_timeseries(
                     packet_details=server_data["received_packet_details"],
                     timestamp_key='server_ts',
-                    bytes_key='payload_size', # Or a calculated protocol_size_per_packet if available
-                    title_prefix=f"Server RX Payload",
+                    bytes_key='payload_size',  # Or a calculated protocol_size_per_packet if available
+                    title_prefix="Server RX Payload", # F541 Fix
                     output_filename=f"server_rx_payload_bw_{server_sid}_{server_client_addr}.png",
                     session_id=server_sid
                 )
@@ -318,3 +318,4 @@ if __name__ == '__main__':
              print("No client or server result files with recognizable SIDs found to analyze.")
     else:
         print(f"No result files found in '{results_path}' directory.")
+```
